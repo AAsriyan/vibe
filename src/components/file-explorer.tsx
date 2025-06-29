@@ -1,51 +1,56 @@
 import { CopyCheckIcon, CopyIcon } from "lucide-react";
-import { Hint } from "./hint";
-import { Button } from "./ui/button";
 import { useState, useMemo, useCallback, Fragment } from "react";
+
+import { Hint } from "@/components/hint";
+import { Button } from "@/components/ui/button";
+import { CodeView } from "@/components/code-view";
+import { convertFilesToTreeItems } from "@/lib/utils";
 import {
+  ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-  ResizableHandle,
-} from "./ui/resizable";
+} from "@/components/ui/resizable";
 import {
   Breadcrumb,
-  BreadcrumbEllipsis,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "./ui/breadcrumb";
-import { CodeView } from "./code-view";
-import { convertFilesToTreeItems } from "@/lib/utils";
+  BreadcrumbEllipsis,
+} from "@/components/ui/breadcrumb";
+
 import { TreeView } from "./tree-view";
 
 type FileCollection = { [path: string]: string };
 
-const getLanguageFromExtension = (filename: string) => {
+function getLanguageFromExtension(filename: string): string {
   const extension = filename.split(".").pop()?.toLowerCase();
   return extension || "text";
-};
+}
 
 interface FileBreadcrumbProps {
-  filePath: string | null;
+  filePath: string;
 }
 
 const FileBreadcrumb = ({ filePath }: FileBreadcrumbProps) => {
-  const pathParts = filePath?.split("/") || [];
+  const pathSegments = filePath.split("/");
   const maxSegments = 4;
 
   const renderBreadcrumbItems = () => {
-    if (pathParts.length <= maxSegments) {
-      // Show all segments
-      return pathParts.map((part, index) => {
-        const isLast = index === pathParts.length - 1;
+    if (pathSegments.length <= maxSegments) {
+      // Show all segments if 4 or less
+      return pathSegments.map((segment, index) => {
+        const isLast = index === pathSegments.length - 1;
+
         return (
           <Fragment key={index}>
             <BreadcrumbItem>
               {isLast ? (
-                <BreadcrumbPage className="font-medium">{part}</BreadcrumbPage>
+                <BreadcrumbPage className="font-medium">
+                  {segment}
+                </BreadcrumbPage>
               ) : (
-                <span className="text-muted-foreground">{part}</span>
+                <span className="text-muted-foreground">{segment}</span>
               )}
             </BreadcrumbItem>
             {!isLast && <BreadcrumbSeparator />}
@@ -53,21 +58,23 @@ const FileBreadcrumb = ({ filePath }: FileBreadcrumbProps) => {
         );
       });
     } else {
-      const firstPart = pathParts[0];
-      const lastPart = pathParts[pathParts.length - 1];
+      const firstSegment = pathSegments[0];
+      const lastSegment = pathSegments[pathSegments.length - 1];
 
       return (
         <>
           <BreadcrumbItem>
-            <span className="text-muted-foreground">{firstPart}</span>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbEllipsis />
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="font-medium">{lastPart}</BreadcrumbPage>
+            <span className="text-muted-foreground">{firstSegment}</span>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbEllipsis />
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="font-medium">
+                {lastSegment}
+              </BreadcrumbPage>
+            </BreadcrumbItem>
           </BreadcrumbItem>
         </>
       );
@@ -88,29 +95,32 @@ interface FileExplorerProps {
 export const FileExplorer = ({ files }: FileExplorerProps) => {
   const [copied, setCopied] = useState(false);
   const [selectedFile, setSelectedFile] = useState<string | null>(() => {
-    const firstKeys = Object.keys(files);
-    return firstKeys.length > 0 ? firstKeys[0] : null;
+    const fileKeys = Object.keys(files);
+    return fileKeys.length > 0 ? fileKeys[0] : null;
   });
 
-  const treeData = useMemo(() => convertFilesToTreeItems(files), [files]);
+  const treeData = useMemo(() => {
+    return convertFilesToTreeItems(files);
+  }, [files]);
 
   const handleFileSelect = useCallback(
     (filePath: string) => {
+      //console.log("filePath", filePath);
       if (files[filePath]) {
         setSelectedFile(filePath);
       }
     },
-    [files, setSelectedFile]
+    [files]
   );
 
   const handleCopy = useCallback(() => {
     if (selectedFile) {
       navigator.clipboard.writeText(files[selectedFile]);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
     }
-    setCopied(true);
-    setTimeout(() => {
-      setCopied(false);
-    }, 2000);
   }, [selectedFile, files]);
 
   return (
@@ -122,14 +132,11 @@ export const FileExplorer = ({ files }: FileExplorerProps) => {
           onSelect={handleFileSelect}
         />
       </ResizablePanel>
-      <ResizableHandle
-        withHandle
-        className="hover:bg-primary transition-colors"
-      />
+      <ResizableHandle className="hover:bg-primary transition-colors" />
       <ResizablePanel defaultSize={70} minSize={50}>
         {selectedFile && files[selectedFile] ? (
           <div className="h-full w-full flex flex-col">
-            <div className="border-b bg-sidebar flex justify-between items-center gap-x-2">
+            <div className="border-b bg-sidebar px-4 py-2 flex justify-between items-center gap-x-2">
               <FileBreadcrumb filePath={selectedFile} />
               <Hint text="Copy to clipboard" side="bottom">
                 <Button
@@ -137,7 +144,7 @@ export const FileExplorer = ({ files }: FileExplorerProps) => {
                   size="icon"
                   className="ml-auto"
                   onClick={handleCopy}
-                  disabled={!selectedFile || copied}
+                  disabled={copied}
                 >
                   {copied ? <CopyCheckIcon /> : <CopyIcon />}
                 </Button>

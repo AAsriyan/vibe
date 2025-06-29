@@ -1,3 +1,9 @@
+import { TreeItem } from "@/types";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -5,22 +11,17 @@ import {
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarMenuItem,
   SidebarMenuSub,
   SidebarProvider,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { TreeItem } from "@/types";
 import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./ui/collapsible";
 
 interface TreeViewProps {
   data: TreeItem[];
   value?: string | null;
-  onSelect?: (path: string) => void;
+  onSelect?: (value: string) => void;
 }
 
 export const TreeView = ({ data, value, onSelect }: TreeViewProps) => {
@@ -54,30 +55,32 @@ interface TreeProps {
   item: TreeItem;
   selectedValue?: string | null;
   onSelect?: (value: string) => void;
-  parentPath?: string;
+  parentPath: string;
 }
 
 const Tree = ({ item, selectedValue, onSelect, parentPath }: TreeProps) => {
   const [name, ...items] = Array.isArray(item) ? item : [item];
   const currentPath = parentPath ? `${parentPath}/${name}` : name;
 
-  // This is a file
-  if (items.length === 0) {
+  if (!items.length) {
+    // It's a file
     const isSelected = selectedValue === currentPath;
 
-    <SidebarMenuButton
-      isActive={isSelected}
-      className="data-[active=true]:bg-transparent"
-      onClick={() => onSelect?.(currentPath)}
-    >
-      <FileIcon />
-      <span className="truncate">{name}</span>
-    </SidebarMenuButton>;
+    return (
+      <SidebarMenuButton
+        isActive={isSelected}
+        className="data-[active=true]:bg-transparent"
+        onClick={() => onSelect?.(currentPath)}
+      >
+        <FileIcon />
+        <span className="truncate">{name}</span>
+      </SidebarMenuButton>
+    );
   }
 
-  // This is a folder
+  // It's a folder
   return (
-    <SidebarMenuButton>
+    <SidebarMenuItem>
       <Collapsible
         className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
         defaultOpen
@@ -103,6 +106,6 @@ const Tree = ({ item, selectedValue, onSelect, parentPath }: TreeProps) => {
           </SidebarMenuSub>
         </CollapsibleContent>
       </Collapsible>
-    </SidebarMenuButton>
+    </SidebarMenuItem>
   );
 };
