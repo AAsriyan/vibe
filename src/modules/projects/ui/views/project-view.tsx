@@ -1,8 +1,5 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
-
 import { FileExplorer } from "@/components/file-explorer";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,18 +23,6 @@ interface ProjectViewProps {
 export const ProjectView = ({ projectId }: ProjectViewProps) => {
   const [activeFragment, setActiveFragment] = useState<Fragment | null>(null);
   const [tabState, setTabState] = useState<"preview" | "code">("preview");
-
-  const trpc = useTRPC();
-  const { data: project } = useSuspenseQuery(
-    trpc.projects.getOne.queryOptions({
-      id: projectId,
-    })
-  );
-  const { data: messages } = useSuspenseQuery(
-    trpc.messages.getMany.queryOptions({
-      projectId,
-    })
-  );
 
   return (
     <div className="h-screen">
@@ -82,7 +67,7 @@ export const ProjectView = ({ projectId }: ProjectViewProps) => {
                 </TabsTrigger>
               </TabsList>
               <div className="ml-auto flex items-center gap-x-2">
-                <Button asChild size="sm">
+                <Button variant="tertiary" asChild size="sm">
                   <Link href={`/pricing`}>
                     <CrownIcon /> Upgrade
                   </Link>
