@@ -1,38 +1,43 @@
 import { MessageRole, MessageType } from "@/generated/prisma";
 import { inngest } from "@/inngest/client";
 import { prisma } from "@/lib/db";
-import { baseProcedure, createTRPCRouter } from "@/trpc/init";
+import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { generateSlug } from "random-word-slugs";
 import { z } from "zod";
 
 export const projectsRouter = createTRPCRouter({
-  getOne: baseProcedure
+  getOne: protectedProcedure
     .input(z.object({ id: z.string().min(1, { message: "ID is required" }) }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const { id } = input;
 
-      const project = await prisma.project.findUnique({ where: { id } });
+      const existingProject = await prisma.project.findUnique({
+        where: { id, userId: ctx.auth.userId },
+      });
 
-      if (!project) {
+      if (!existingProject) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Project not found",
         });
       }
 
-      return project;
+      return existingProject;
     }),
-  getMany: baseProcedure.query(async () => {
+  getMany: protectedProcedure.query(async ({ ctx }) => {
     const projects = await prisma.project.findMany({
+      where: {
+        userId: ctx.auth.userId,
+      },
       orderBy: {
-        updatedAt: "asc",
+        updatedAt: "desc",
       },
     });
 
     return projects;
   }),
-  create: baseProcedure
+  create: protectedProcedure
     .input(
       z.object({
         value: z
@@ -41,12 +46,13 @@ export const projectsRouter = createTRPCRouter({
           .max(10000, { message: "Value is too long" }),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const { value } = input;
 
       const createdProject = await prisma.project.create({
         data: {
           name: generateSlug(2, { format: "kebab" }),
+          userId: ctx.auth.userId,
           messages: {
             create: {
               content: value,

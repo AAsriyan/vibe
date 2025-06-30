@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormField } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
+import { useClerk } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpIcon, Loader2Icon } from "lucide-react";
@@ -11,7 +12,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import TextareaAutosize from "react-textarea-autosize";
-import { toast } from "sonner";
 import { z } from "zod";
 import { PROJECT_TEMPLATES } from "../../constants";
 
@@ -25,6 +25,7 @@ const formSchema = z.object({
 export const ProjectForm = () => {
   const router = useRouter();
   const trpc = useTRPC();
+  const clerk = useClerk();
   const queryClient = useQueryClient();
 
   const [isFocused, setIsFocused] = useState(false);
@@ -37,8 +38,11 @@ export const ProjectForm = () => {
         // TODO: invalidate usage status
       },
       onError: (error) => {
+        if (error.data?.code === "UNAUTHORIZED") {
+          clerk.openSignIn();
+        }
+
         // TODO: Redirect to pricing page if user is over limit
-        toast.error(error.message);
       },
     })
   );
