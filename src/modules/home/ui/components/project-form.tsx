@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import TextareaAutosize from "react-textarea-autosize";
+import { toast } from "sonner";
 import { z } from "zod";
 import { PROJECT_TEMPLATES } from "../../constants";
 
@@ -35,14 +36,18 @@ export const ProjectForm = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries(trpc.projects.getMany.queryOptions());
         router.push(`/projects/${data.id}`);
-        // TODO: invalidate usage status
+        queryClient.invalidateQueries(trpc.usage.status.queryOptions());
       },
       onError: (error) => {
+        toast.error(error.message);
+
         if (error.data?.code === "UNAUTHORIZED") {
           clerk.openSignIn();
         }
 
-        // TODO: Redirect to pricing page if user is over limit
+        if (error.data?.code === "TOO_MANY_REQUESTS") {
+          router.push("/pricing");
+        }
       },
     })
   );
@@ -138,8 +143,10 @@ export const ProjectForm = () => {
                 onSelect(template.prompt);
               }}
             >
-              {template.emoji}
-              {template.title}
+              <div className="flex items-center gap-x-2">
+                <span className="text-sm">{template.emoji}</span>
+                <span className="text-sm">{template.title}</span>
+              </div>
             </Button>
           ))}
         </div>
