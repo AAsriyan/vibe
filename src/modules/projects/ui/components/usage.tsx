@@ -1,17 +1,34 @@
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@clerk/nextjs";
-import { formatDuration, intervalToDuration } from "date-fns";
-import { CrownIcon } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { CrownIcon } from "lucide-react";
+import { formatDuration, intervalToDuration } from "date-fns";
 
-interface UsageProps {
+import { Button } from "@/components/ui/button";
+
+interface Props {
   points: number;
   msBeforeNext: number;
 }
 
-export const Usage = ({ points, msBeforeNext }: UsageProps) => {
+export const Usage = ({ points, msBeforeNext }: Props) => {
   const { has } = useAuth();
   const hasProAccess = has?.({ plan: "pro" });
+
+  const resetTime = useMemo(() => {
+    try {
+      return formatDuration(
+        intervalToDuration({
+          start: new Date(),
+          end: new Date(Date.now() + msBeforeNext),
+        }),
+        { format: ["months", "days", "hours"] }
+      );
+    } catch (error) {
+      console.error("Error formatting duration ", error);
+      return "unknown";
+    }
+  }, [msBeforeNext]);
 
   return (
     <div className="rounded-t-xl bg-background border border-b-0 p-2.5">
@@ -20,23 +37,12 @@ export const Usage = ({ points, msBeforeNext }: UsageProps) => {
           <p className="text-sm">
             {points} {hasProAccess ? "" : "free"} credits remaining
           </p>
-          <p className="text-xs text-muted-foreground">
-            Resets in{" "}
-            {formatDuration(
-              intervalToDuration({
-                start: new Date(),
-                end: new Date(Date.now() + msBeforeNext),
-              }),
-              {
-                format: ["months", "days", "hours"],
-              }
-            )}
-          </p>
+          <p className="text-xs text-muted-foreground">Resets in {resetTime}</p>
         </div>
         {!hasProAccess && (
-          <Button variant="tertiary" size="sm" className="ml-auto" asChild>
+          <Button asChild size="sm" variant="tertiary" className="ml-auto">
             <Link href="/pricing">
-              <CrownIcon className="w-4 h-4" /> Upgrade
+              <CrownIcon /> Upgrade
             </Link>
           </Button>
         )}
